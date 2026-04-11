@@ -54,29 +54,13 @@ public class OrderController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('STAFF')")
-    public ResponseEntity<?> createOrder(@RequestBody Map<String, Object> payload) {
+    public ResponseEntity<?> createOrder(@RequestBody OrderDTO orderDTO) {
         try {
-            OrderDTO orderDTO = new OrderDTO();
-            orderDTO.setCustomerId(((Number) payload.get("customerId")).longValue());
-
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> itemsData = (List<Map<String, Object>>) payload.get("items");
-            List<OrderItemDTO> items = itemsData.stream()
-                    .map(item -> new OrderItemDTO(
-                            null,
-                            ((Number) item.get("productId")).longValue(),
-                            (String) item.get("productName"),
-                            ((Number) item.get("quantity")).intValue(),
-                            new java.math.BigDecimal(item.get("price").toString()),
-                            null
-                    ))
-                    .toList();
-
             log.info("Creating order for customer: {}", orderDTO.getCustomerId());
-            OrderDTO order = orderService.createOrder(orderDTO, items);
+            OrderDTO order = orderService.createOrder(orderDTO, orderDTO.getItems());
             return ResponseEntity.status(HttpStatus.CREATED).body(order);
         } catch (Exception e) {
-            log.error("Error creating order: {}", e.getMessage());
+            log.error("Error creating order: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(new ApiResponse(false, e.getMessage()));
         }
@@ -102,6 +86,23 @@ public class OrderController {
             log.info("Cancelling order: {}", id);
             OrderDTO order = orderService.cancelOrder(id);
             return ResponseEntity.ok(order);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ApiResponse(false, e.getMessage()));
+        }
+    }
+
+    @GetMapping("/{id}/invoice")
+    @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('STAFF')")
+    public ResponseEntity<?> downloadInvoice(@PathVariable Long id) {
+        try {
+            log.info("Downloading invoice for order: {}", id);
+            String base64 = orderService.getOrderInvoiceBase64(id);
+            byte[] pdfBytes = java.util.Base64.getDecoder().decode(base64);
+            return ResponseEntity.ok()
+                    .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"invoice_" + id + ".pdf\"")
+                    .contentType(org.springframework.http.MediaType.APPLICATION_PDF)
+                    .body(pdfBytes);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(new ApiResponse(false, e.getMessage()));

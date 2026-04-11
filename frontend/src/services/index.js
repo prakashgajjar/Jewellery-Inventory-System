@@ -75,6 +75,9 @@ export const orderService = {
 
   cancel: (id) =>
     api.put(`/orders/${id}/cancel`),
+
+  downloadInvoice: (id) =>
+    api.get(`/orders/${id}/invoice`, { responseType: 'blob' }),
 }
 
 export const rateService = {
@@ -95,4 +98,12 @@ export const rateService = {
 
   update: (id, data) =>
     api.put(`/rates/${id}`, data),
+}
+
+export const reportService = {
+  getDashboard: () =>
+    api.get('/reports/dashboard'),
+
+  exportReport: () =>
+    api.get('/reports/export', { responseType: 'blob' }),
 }

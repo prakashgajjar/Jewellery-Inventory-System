@@ -25,6 +25,9 @@ public class OrderService {
     private OrderRepository orderRepository;
 
     @Autowired
+    private PdfInvoiceGenerator pdfInvoiceGenerator;
+
+    @Autowired
     private OrderItemRepository orderItemRepository;
 
     @Autowired
@@ -126,11 +129,20 @@ public class OrderService {
         Order order = orderOpt.get();
         order.setStatus(Order.OrderStatus.COMPLETED);
         order.setInvoiceNumber("INV-" + order.getId() + "-" + System.currentTimeMillis());
+        order.setInvoicePdf(pdfInvoiceGenerator.generateInvoiceBase64(order));
 
         Order updatedOrder = orderRepository.save(order);
         log.info("Order completed: {}", id);
 
         return toDTO(updatedOrder);
+    }
+
+    public String getOrderInvoiceBase64(Long id) {
+        Optional<Order> orderOpt = orderRepository.findById(id);
+        if (orderOpt.isEmpty() || orderOpt.get().getInvoicePdf() == null) {
+            throw new RuntimeException("Invoice not found");
+        }
+        return orderOpt.get().getInvoicePdf();
     }
 
     public OrderDTO cancelOrder(Long id) {

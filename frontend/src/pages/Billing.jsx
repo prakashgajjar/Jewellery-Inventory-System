@@ -34,18 +34,18 @@ const Billing = () => {
 
   const addToInvoice = (product) => {
     const qty = quantities[product.id] || 1
-    const existingItem = invoiceItems.find(item => item.product_id === product.id)
+    const existingItem = invoiceItems.find(item => item.productId === product.id)
     
     if (existingItem) {
       setInvoiceItems(invoiceItems.map(item =>
-        item.product_id === product.id
+        item.productId === product.id
           ? { ...item, quantity: item.quantity + qty, total_price: (item.quantity + qty) * product.purity }
           : item
       ))
     } else {
       setInvoiceItems([...invoiceItems, {
-        product_id: product.id,
-        name: product.name,
+        productId: product.id,
+        productName: product.name,
         price: product.purity,
         quantity: qty,
         total_price: qty * product.purity
@@ -55,7 +55,7 @@ const Billing = () => {
   }
 
   const removeFromInvoice = (productId) => {
-    setInvoiceItems(invoiceItems.filter(item => item.product_id !== productId))
+    setInvoiceItems(invoiceItems.filter(item => item.productId !== productId))
   }
 
   const subtotal = invoiceItems.reduce((sum, item) => sum + item.total_price, 0)
@@ -74,10 +74,10 @@ const Billing = () => {
 
     try {
       const orderData = {
-        customer_id: selectedCustomer,
+        customerId: selectedCustomer,
         subtotal: subtotal,
         gst: gst,
-        total_amount: total,
+        totalAmount: total,
         items: invoiceItems
       }
       await orderService.create(orderData)
@@ -158,15 +158,15 @@ const Billing = () => {
               <p className="text-sm text-gray-500">No items added</p>
             ) : (
               invoiceItems.map((item) => (
-                <div key={item.product_id} className="flex justify-between text-sm">
+                <div key={item.productId} className="flex justify-between text-sm">
                   <div>
-                    <span className="block font-medium">{item.name}</span>
+                    <span className="block font-medium">{item.productName}</span>
                     <span className="text-xs text-gray-500">{item.quantity} x ₹{item.price}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="font-medium">₹{item.total_price.toFixed(2)}</span>
                     <button 
-                      onClick={() => removeFromInvoice(item.product_id)}
+                      onClick={() => removeFromInvoice(item.productId)}
                       className="text-red-600 hover:bg-red-50 p-1 rounded">
                       <Trash2 className="w-3 h-3" />
                     </button>

@@ -47,6 +47,23 @@ const Orders = () => {
     }
   }
 
+  const handleDownloadInvoice = async (id) => {
+    try {
+      setToast({ type: 'success', message: 'Downloading invoice...' })
+      const data = await orderService.downloadInvoice(id)
+      const url = window.URL.createObjectURL(new Blob([data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', `invoice_${id}.pdf`)
+      document.body.appendChild(link)
+      link.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(link)
+    } catch (error) {
+      setToast({ type: 'error', message: 'Failed to download invoice' })
+    }
+  }
+
   const filteredOrders = orders.filter(o =>
     statusFilter === 'All Status' || o.status === statusFilter.toUpperCase()
   )
@@ -115,6 +132,14 @@ const Orders = () => {
                         className="text-primary hover:bg-blue-50 p-2 rounded">
                         <Eye className="w-4 h-4" />
                       </button>
+                      {order.status === 'COMPLETED' && (
+                        <button 
+                          onClick={() => handleDownloadInvoice(order.id)}
+                          title="Download Invoice"
+                          className="text-gray-600 hover:bg-gray-100 p-2 rounded">
+                          <Download className="w-4 h-4" />
+                        </button>
+                      )}
                       {order.status === 'PENDING' && (
                         <>
                           <button 
