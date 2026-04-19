@@ -10,6 +10,7 @@ import com.jewellery.inventory.repository.ProductRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -19,6 +20,7 @@ import java.util.stream.Collectors;
 
 @Service
 @Slf4j
+@Transactional
 public class OrderService {
 
     @Autowired
@@ -47,6 +49,7 @@ public class OrderService {
         Order order = new Order();
         order.setCustomer(customerOpt.get());
         order.setStatus(Order.OrderStatus.PENDING);
+        order.setItems(new java.util.ArrayList<>());
 
         BigDecimal subtotal = BigDecimal.ZERO;
 

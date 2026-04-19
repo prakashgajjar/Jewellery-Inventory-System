@@ -34,21 +34,22 @@ const Billing = () => {
 
   const addToInvoice = (product) => {
     const qty = quantities[product.id] || 1
+    const price = product.makingCharges || 0
     const existingItem = invoiceItems.find(item => item.productId === product.id)
-    
+
     if (existingItem) {
       setInvoiceItems(invoiceItems.map(item =>
         item.productId === product.id
-          ? { ...item, quantity: item.quantity + qty, total_price: (item.quantity + qty) * product.purity }
+          ? { ...item, quantity: item.quantity + qty, total_price: (item.quantity + qty) * price }
           : item
       ))
     } else {
       setInvoiceItems([...invoiceItems, {
         productId: product.id,
         productName: product.name,
-        price: product.purity,
+        price: price,
         quantity: qty,
-        total_price: qty * product.purity
+        total_price: qty * price
       }])
     }
     setToast({ type: 'success', message: 'Item added to invoice' })
@@ -80,13 +81,33 @@ const Billing = () => {
         totalAmount: total,
         items: invoiceItems
       }
-      await orderService.create(orderData)
-      setToast({ type: 'success', message: 'Order created successfully' })
+
+      setToast({ type: 'success', message: 'Processing order...' })
+
+      const newOrder = await orderService.create(orderData)
+      await orderService.complete(newOrder.id)
+
+      try {
+        const invoiceData = await orderService.downloadInvoice(newOrder.id)
+        const url = window.URL.createObjectURL(new Blob([invoiceData]))
+        const link = document.createElement('a')
+        link.href = url
+        link.setAttribute('download', `invoice_${newOrder.id}.pdf`)
+        document.body.appendChild(link)
+        link.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(link)
+      } catch (e) {
+        console.error('Invoice download failed', e)
+        setToast({ type: 'error', message: 'Order completed but failed to download invoice' })
+      }
+
+      setToast({ type: 'success', message: 'Order completed successfully' })
       setInvoiceItems([])
       setSelectedCustomer(null)
       setQuantities({})
     } catch (error) {
-      setToast({ type: 'error', message: 'Failed to create order' })
+      setToast({ type: 'error', message: 'Failed to complete order' })
     }
   }
 
@@ -97,11 +118,11 @@ const Billing = () => {
         {/* Products Section */}
         <div className="col-span-2 bg-white rounded-softer shadow-soft p-6">
           <h2 className="text-lg font-bold text-text-dark mb-4">Select Products</h2>
-          
+
           {/* Customer Selection */}
           <div className="mb-6 p-4 bg-blue-50 rounded-soft">
             <label className="block text-sm font-medium mb-2">Select Customer</label>
-            <select 
+            <select
               value={selectedCustomer || ''}
               onChange={(e) => setSelectedCustomer(parseInt(e.target.value))}
               className="w-full px-4 py-2 border border-gray-300 rounded-soft"
@@ -124,17 +145,17 @@ const Billing = () => {
                 <div key={product.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-soft hover:bg-gray-50">
                   <div>
                     <p className="font-medium text-text-dark">{product.name}</p>
-                    <p className="text-xs text-gray-500">₹{product.purity} • Stock: {product.stock}</p>
+                    <p className="text-xs text-gray-500">₹{product.makingCharges || 0} • Stock: {product.stock} • Purity: {product.purity}K</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <input 
+                    <input
                       type="number"
                       min="1"
                       value={quantities[product.id] || 1}
-                      onChange={(e) => setQuantities({...quantities, [product.id]: parseInt(e.target.value)})}
+                      onChange={(e) => setQuantities({ ...quantities, [product.id]: parseInt(e.target.value) })}
                       className="w-12 px-2 py-1 border border-gray-300 rounded text-sm"
                     />
-                    <button 
+                    <button
                       onClick={() => addToInvoice(product)}
                       disabled={product.stock === 0}
                       className="px-3 py-1 bg-primary text-white rounded text-sm hover:opacity-90 disabled:opacity-50"
@@ -165,7 +186,7 @@ const Billing = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="font-medium">₹{item.total_price.toFixed(2)}</span>
-                    <button 
+                    <button
                       onClick={() => removeFromInvoice(item.productId)}
                       className="text-red-600 hover:bg-red-50 p-1 rounded">
                       <Trash2 className="w-3 h-3" />
@@ -194,7 +215,7 @@ const Billing = () => {
 
           {/* Buttons */}
           <div className="space-y-2">
-            <button 
+            <button
               onClick={handleCompleteOrder}
               disabled={invoiceItems.length === 0 || !selectedCustomer}
               className="w-full bg-primary text-white py-2 rounded-soft font-medium hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
@@ -202,7 +223,7 @@ const Billing = () => {
               <Download className="w-4 h-4" />
               Complete Order
             </button>
-            <button 
+            <button
               onClick={() => {
                 setInvoiceItems([])
                 setSelectedCustomer(null)
